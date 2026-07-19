@@ -1,0 +1,52 @@
+name: Build Labour Activity APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JS deps
+        run: npm install
+
+      - name: Stage web assets into www/
+        run: |
+          mkdir -p www
+          cp index.html www/index.html
+          cp logo.png www/logo.png || true
+          cp manifest.json www/manifest.json || true
+          cp icon-192.png www/icon-192.png || true
+          cp icon-512.png www/icon-512.png || true
+          cp apple-touch-icon.png www/apple-touch-icon.png || true
+
+      - name: Add Android platform
+        run: npx cap add android || true
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Place google-services.json
+        run: cp google-services.json android/app/google-services.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Build debug APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: labour-activity-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
